@@ -1,0 +1,33 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "us-central1-docker.pkg.dev/menuflashjdvpl/snake-backend-repo/snake-backend",
+        "-f",
+        "dockerfile.prod",
+        "--platform=linux/amd64",
+        "."
+      ]
+
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["push", "us-central1-docker.pkg.dev/menuflashjdvpl/snake-backend-repo/snake-backend"]
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      [
+        "run",
+        "deploy",
+        "snake-backend",
+        "--image=us-central1-docker.pkg.dev/menuflashjdvpl/snake-backend-repo/snake-backend",
+        "--region=us-central1",
+        "--platform=managed",
+        "--allow-unauthenticated",
+        "--update-secrets=DATABASE_URL=DATABASE_URL:latest",
+        "--set-env-vars=NODE_ENV=production"
+      ]
+
+options:
+  logging: CLOUD_LOGGING_ONLY

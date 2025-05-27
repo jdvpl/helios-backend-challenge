@@ -1,0 +1,45 @@
+#! dependencies
+FROM node:23-alpine3.20 AS deps
+
+WORKDIR /usr/src/app
+
+COPY package.json ./
+COPY package-lock.json ./
+
+RUN npm install
+
+#! builder it builds the app
+
+FROM node:23-alpine3.20 AS builder
+
+WORKDIR /usr/src/app
+
+#copy the dependencies from deps
+COPY --from=deps /usr/src/app/node_modules ./node_modules
+
+COPY . .
+
+RUN npm run build
+
+RUN npm ci -f --only=production && npm cache clean --force
+
+RUN npx prisma generate
+
+#! final stage
+FROM node:23-alpine3.20 AS prod
+
+
+WORKDIR /usr/src/app
+
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+
+# copy the builded app
+COPY --from=builder /usr/src/app/dist ./dist
+
+ENV NODE_ENV=production
+
+USER node
+
+EXPOSE 8000
+
+CMD ["node", "dist/main.js"]  
